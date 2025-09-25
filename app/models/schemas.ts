@@ -58,6 +58,8 @@ export const UpstreamRequestSchema = z.object({
   model_item: ModelItemSchema.optional(),
   tool_servers: z.array(z.string()).optional(),
   variables: z.record(z.string()).optional(),
+  tools: z.array(z.record(z.any())).optional(),
+  tool_choice: z.any().optional(),
 });
 
 export type UpstreamRequest = z.infer<typeof UpstreamRequestSchema>;
@@ -122,6 +124,7 @@ export type UpstreamDataInner = z.infer<typeof UpstreamDataInnerSchema>;
 export const UpstreamDataDataSchema = z.object({
   delta_content: z.string().default(""),
   edit_content: z.string().default(""),
+  edit_index: z.number().optional(),
   phase: z.string().default(""),
   done: z.boolean().default(false),
   usage: UsageSchema.optional(),

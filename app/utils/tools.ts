@@ -30,13 +30,14 @@ export function generateToolPrompt(tools: any[]): string {
   }
 
   const toolDefinitions: string[] = [];
-  for (const tool of tools) {
+  for (let i = 0; i < tools.length; i++) {
+    const tool = tools[i];
     if (tool.type !== "function") {
       continue;
     }
 
     const functionSpec = tool.function || {};
-    const functionName = functionSpec.name || "unknown";
+    const functionName = (functionSpec.name && String(functionSpec.name).trim()) ? functionSpec.name : `tool_${i + 1}`;
     const functionDescription = functionSpec.description || "";
     const parameters = functionSpec.parameters || {};
 
@@ -64,27 +65,13 @@ export function generateToolPrompt(tools: any[]): string {
     return "";
   }
 
-  // Build comprehensive tool prompt
+  // Build concise tool prompt（避免 Markdown fenced JSON 以免干扰模型输出）
   const promptTemplate = (
-    "\n\n# AVAILABLE FUNCTIONS\n" + toolDefinitions.join("\n\n---\n") + "\n\n# USAGE INSTRUCTIONS\n" +
-    "When you need to execute a function, respond ONLY with a JSON object containing tool_calls:\n" +
-    "```json\n" +
-    "{\n" +
-    '  "tool_calls": [\n' +
-    "    {\n" +
-    '      "id": "call_xxx",\n' +
-    '      "type": "function",\n' +
-    '      "function": {\n' +
-    '        "name": "function_name",\n' +
-    '        "arguments": "{\\"param1\\": \\"value1\\"}"\n' +
-    "      }\n" +
-    "    }\n" +
-    "  ]\n" +
-    "}\n" +
-    "```\n" +
-    "Important: No explanatory text before or after the JSON. The 'arguments' field must be a JSON string, not an object.\n"
+    "\n\n# AVAILABLE FUNCTIONS\n" + toolDefinitions.join("\n\n---\n") +
+    "\n\n# USAGE INSTRUCTIONS\n" +
+    "When a function is required, respond only with a JSON object named tool_calls. The field function.arguments must be a JSON-serialized string. Do not include any extra text."
   );
-
+  
   return promptTemplate;
 }
 
@@ -138,10 +125,26 @@ export function processMessagesWithTools(
 
   // Handle tool/function messages
   const finalMsgs: any[] = [];
+  // 构建 tool_call_id -> function.name 的映射，便于在 tool 消息阶段回填名称
+  const toolIdNameMap: Record<string, string> = {};
+  for (const msg of processed) {
+    if (msg?.role === "assistant" && Array.isArray((msg as any).tool_calls)) {
+      for (const tc of (msg as any).tool_calls) {
+        const id = tc?.id;
+        const fname = tc?.function?.name;
+        if (id && fname) {
+          toolIdNameMap[id] = fname;
+        }
+      }
+    }
+  }
+
   for (const m of processed) {
     const role = m.role;
     if (role === "tool" || role === "function") {
-      const toolName = m.name || "unknown";
+      const toolCallId = (m as any).tool_call_id;
+      const resolvedName = toolCallId ? toolIdNameMap[toolCallId] : undefined;
+      const toolName = resolvedName || m.name || "unknown";
       let toolContent = contentToString(m.content || "");
       if (typeof toolContent === "object") {
         toolContent = JSON.stringify(toolContent, null, 2);
@@ -298,21 +301,18 @@ export function extractToolInvocations(text: string): any[] | null {
 export function removeToolJsonContent(text: string): string {
   /**Remove tool JSON content from response text - using bracket balance method*/
   
-  function removeToolCallBlock(match: RegExpMatchArray): string {
-    const jsonContent = match[1];
+  // Step 1: Remove fenced tool JSON blocks（使用捕获组回调）
+  let cleanedText = text.replace(TOOL_CALL_FENCE_PATTERN, (substring: string, group1: string) => {
     try {
-      const parsedData = JSON.parse(jsonContent);
+      const parsedData = JSON.parse(group1);
       if ("tool_calls" in parsedData) {
         return "";
       }
     } catch {
       // 忽略解析错误
     }
-    return match[0];
-  }
-  
-  // Step 1: Remove fenced tool JSON blocks
-  let cleanedText = text.replace(TOOL_CALL_FENCE_PATTERN, removeToolCallBlock);
+    return substring;
+  });
   
   // Step 2: Remove inline tool JSON - 使用基于括号平衡的智能方法
   // 查找所有可能的 JSON 对象并精确删除包含 tool_calls 的对象

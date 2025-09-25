@@ -32,6 +32,7 @@ export class SSEParser {
     }
   }
 
+
   async *iterEvents(): AsyncGenerator<SSEEvent, void, unknown> {
     this.debugLog("开始解析 SSE 流");
 
@@ -75,11 +76,17 @@ export class SSEParser {
           if (field === "data") {
             this.debugLog(`收到数据 (第${this.lineCount}行): ${value}`);
 
+            // Skip empty data
+            if (!value.trim()) {
+              continue;
+            }
+
             // Try to parse JSON
             try {
               const data = JSON.parse(value);
               yield { type: "data", data, raw: value, is_json: true };
-            } catch {
+            } catch (jsonError) {
+              this.debugLog(`JSON解析失败: ${jsonError}, 原始数据: ${value.substring(0, 100)}...`);
               yield { type: "data", data: value, raw: value, is_json: false };
             }
           } else if (field === "event") {
@@ -111,17 +118,32 @@ export class SSEParser {
 
   async *iterJsonData<T = any>(validator?: (data: any) => T): AsyncGenerator<SSEEvent & { data: T }, void, unknown> {
     for await (const event of this.iterEvents()) {
-      if (event.type === "data" && event.is_json !== false) {
-        try {
-          if (validator) {
-            const validatedData = validator(event.data);
-            yield { ...event, data: validatedData };
-          } else {
-            yield event as SSEEvent & { data: T };
+      if (event.type === "data") {
+        // 对于JSON数据，直接返回
+        if (event.is_json !== false) {
+          try {
+            if (validator) {
+              const validatedData = validator(event.data);
+              yield { ...event, data: validatedData };
+            } else {
+              yield event as SSEEvent & { data: T };
+            }
+          } catch (error) {
+            this.debugLog(`数据验证失败: ${error}`);
+            // 验证失败时，返回原始数据而不是跳过
+            yield { ...event, data: event.data };
           }
-        } catch (error) {
-          this.debugLog(`数据验证失败: ${error}`);
-          continue;
+        } else {
+          // 对于非JSON数据，尝试再次解析或返回字符串
+          this.debugLog(`收到非JSON数据: ${event.raw}`);
+          try {
+            // 尝试再次解析JSON，可能是SSE解析时的误判
+            const reparsedData = JSON.parse(event.raw || event.data);
+            yield { ...event, data: reparsedData, is_json: true };
+          } catch {
+            // 确实不是JSON，返回原始字符串作为数据
+            yield { ...event, data: event.data };
+          }
         }
       }
     }
@@ -129,9 +151,5 @@ export class SSEParser {
 
   close(): void {
     // Response is automatically closed when the stream ends
-  }
-
-  async [Symbol.asyncDispose](): Promise<void> {
-    this.close();
   }
 }

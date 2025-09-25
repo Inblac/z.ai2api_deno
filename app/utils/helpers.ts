@@ -294,7 +294,7 @@ export async function callUpstreamApi(
     method: "POST",
     headers,
     body: bodyJson,
-    signal: AbortSignal.timeout(60000),
+    signal: AbortSignal.timeout(300000),
   });
   
   debugLog(`上游响应状态: ${response.status}`);

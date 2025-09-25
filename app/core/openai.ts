@@ -84,6 +84,7 @@ openaiRouter.post("/chat/completions", async (ctx) => {
     const request = OpenAIRequestSchema.parse(requestBody);
     
     debugLog(`请求解析成功 - 模型: ${request.model}, 流式: ${request.stream}, 消息数: ${request.messages.length}`);
+    debugLog(`消息体${requestBody}`)
     
     // Generate IDs
     const [chatId, msgId] = generateRequestIds();
@@ -148,6 +149,8 @@ openaiRouter.post("/chat/completions", async (ctx) => {
         owned_by: "openai"
       },
       tool_servers: [],
+      tools: (config.TOOL_SUPPORT && request.tools && request.tools.length > 0) ? request.tools : undefined,
+      tool_choice: (config.TOOL_SUPPORT && request.tool_choice) ? request.tool_choice : undefined,
       variables: {
         "{{USER_NAME}}": "User",
         "{{USER_LOCATION}}": "Unknown",
