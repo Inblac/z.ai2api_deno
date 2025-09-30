@@ -7,12 +7,15 @@ export interface Config {
   API_ENDPOINT: string;
   AUTH_TOKEN: string;
   BACKUP_TOKEN: string;
-  
+
   // Model Configuration
   PRIMARY_MODEL: string;
   THINKING_MODEL: string;
   SEARCH_MODEL: string;
   AIR_MODEL: string;
+  PRIMARY_MODEL_NEW: string;
+  THINKING_MODEL_NEW: string;
+  SEARCH_MODEL_NEW: string;
   
   // Server Configuration
   LISTEN_PORT: number;
@@ -57,6 +60,9 @@ export const config: Config = {
   THINKING_MODEL: getEnvVar("THINKING_MODEL", "GLM-4.5-Thinking"),
   SEARCH_MODEL: getEnvVar("SEARCH_MODEL", "GLM-4.5-Search"),
   AIR_MODEL: getEnvVar("AIR_MODEL", "GLM-4.5-Air"),
+  PRIMARY_MODEL_NEW: getEnvVar("PRIMARY_MODEL_NEW", "GLM-4.6"),
+  THINKING_MODEL_NEW: getEnvVar("THINKING_MODEL_NEW", "GLM-4.6-Thinking"),
+  SEARCH_MODEL_NEW: getEnvVar("SEARCH_MODEL_NEW", "GLM-4.6-Search"),
   
   // Server Configuration
   LISTEN_PORT: getEnvNumber("LISTEN_PORT", 8080),

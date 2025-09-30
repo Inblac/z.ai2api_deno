@@ -7,7 +7,7 @@
   ![Oak](https://img.shields.io/badge/framework-Oak-009688.svg)
   ![Version: 1.2.0](https://img.shields.io/badge/version-1.2.0-brightgreen.svg)
   
-  <p>轻量级 OpenAI API 兼容代理服务，通过 Claude Code Router 接入 Z.AI，支持 GLM-4.5 系列模型的完整功能。使用 Deno 和 Oak 框架重写，提供更好的性能和类型安全。</p>
+  <p>轻量级 OpenAI API 兼容代理服务，通过 Claude Code Router 接入 Z.AI，支持 GLM-4.5 和 GLM-4.6 系列模型的完整功能。使用 Deno 和 Oak 框架重写，提供更好的性能和类型安全。</p>
 </div>
 
 
@@ -116,6 +116,9 @@ docker-compose up -d
 | `GLM-4.5-Thinking` | 0727-360B-API | 思考模型 | 显示推理过程，透明度高 |
 | `GLM-4.5-Search` | 0727-360B-API | 搜索模型 | 实时网络搜索，信息更新 |
 | `GLM-4.5-Air` | 0727-106B-API | 轻量模型 | 快速响应，高效推理 |
+| `GLM-4.6` | GLM-4-6-API-V1 | 新版标准模型 | 通用对话，性能优化 |
+| `GLM-4.6-Thinking` | GLM-4-6-API-V1 | 新版思考模型 | 显示推理过程，透明度高 |
+| `GLM-4.6-Search` | GLM-4-6-API-V1 | 新版搜索模型 | 实时网络搜索，信息更新 |
 | `GLM-4.5V` | glm-4.5v | ❌ 暂不支持 |   |
 
 ### Function Call 功能
@@ -181,6 +184,9 @@ for await (const chunk of response) {
 | `THINKING_MODEL` | `GLM-4.5-Thinking` | 思考模型名称 |
 | `SEARCH_MODEL` | `GLM-4.5-Search` | 搜索模型名称 |
 | `AIR_MODEL` | `GLM-4.5-Air` | Air 模型名称 |
+| `PRIMARY_MODEL_NEW` | `GLM-4.6` | 新版主要模型名称 |
+| `THINKING_MODEL_NEW` | `GLM-4.6-Thinking` | 新版思考模型名称 |
+| `SEARCH_MODEL_NEW` | `GLM-4.6-Search` | 新版搜索模型名称 |
 | `DEBUG_LOGGING` | `true` | 调试日志开关 |
 | `THINKING_PROCESSING` | `think` | 思考内容处理策略 |
 | `ANONYMOUS_MODE` | `true` | 匿名模式开关 |
@@ -221,7 +227,7 @@ async function chatWithAI(message: string): Promise<string> {
 ### 2. 多模型对比测试
 
 ```typescript
-const models = ["GLM-4.5", "GLM-4.5-Thinking", "GLM-4.5-Search", "GLM-4.5-Air"];
+const models = ["GLM-4.5", "GLM-4.5-Thinking", "GLM-4.5-Search", "GLM-4.5-Air", "GLM-4.6", "GLM-4.6-Thinking", "GLM-4.6-Search"];
 
 for (const model of models) {
   const response = await client.chat.completions.create({
@@ -333,11 +339,14 @@ A: 支持聊天完成、模型列表、流式响应、工具调用等核心功�
 A: 改进了工具调用的请求响应结构，支持更复杂的工具链调用和并行执行。
 
 **Q: 如何选择合适的模型？**
-A: 
+A:
 - **GLM-4.5**: 通用场景，性能和效果平衡
 - **GLM-4.5-Thinking**: 需要了解推理过程的场景
 - **GLM-4.5-Search**: 需要实时信息的场景
 - **GLM-4.5-Air**: 高并发、低延迟要求的场景
+- **GLM-4.6**: 新版通用模型，性能进一步优化
+- **GLM-4.6-Thinking**: 新版思考模型，推理能力更强
+- **GLM-4.6-Search**: 新版搜索模型，搜索准确性更高的场景
 
 **Q: 如何自定义配置？**
 A: 通过环境变量配置，推荐使用 `.env` 文件。

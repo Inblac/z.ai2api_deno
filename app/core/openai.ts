@@ -44,6 +44,24 @@ openaiRouter.get("/models", async (ctx) => {
         created: currentTime,
         owned_by: "z.ai"
       },
+      {
+        id: config.PRIMARY_MODEL_NEW,
+        object: "model",
+        created: currentTime,
+        owned_by: "z.ai"
+      },
+      {
+        id: config.THINKING_MODEL_NEW,
+        object: "model",
+        created: currentTime,
+        owned_by: "z.ai"
+      },
+      {
+        id: config.SEARCH_MODEL_NEW,
+        object: "model",
+        created: currentTime,
+        owned_by: "z.ai"
+      },
     ]
   };
   ctx.response.body = response;
@@ -112,7 +130,9 @@ openaiRouter.post("/chat/completions", async (ctx) => {
     const isThinking = request.model === config.THINKING_MODEL;
     const isSearch = request.model === config.SEARCH_MODEL;
     const isAir = request.model === config.AIR_MODEL;
-    const searchMcp = isSearch ? "deep-web-search" : "";
+    const isNewThinking = request.model === config.THINKING_MODEL_NEW;
+    const isNewSearch = request.model === config.SEARCH_MODEL_NEW;
+    const searchMcp = isSearch || isNewSearch ? "deep-web-search" : "";
     
     // Determine upstream model ID based on requested model
     let upstreamModelId: string;
@@ -120,6 +140,15 @@ openaiRouter.post("/chat/completions", async (ctx) => {
     if (isAir) {
       upstreamModelId = "0727-106B-API"; // AIR model upstream ID
       upstreamModelName = "GLM-4.5-Air";
+    } else if (request.model === config.PRIMARY_MODEL_NEW || isNewThinking || isNewSearch) {
+      upstreamModelId = "GLM-4-6-API-V1"; // New GLM-4.6 model upstream ID
+      if (isNewThinking) {
+        upstreamModelName = "GLM-4.6-Thinking";
+      } else if (isNewSearch) {
+        upstreamModelName = "GLM-4.6-Search";
+      } else {
+        upstreamModelName = "GLM-4.6";
+      }
     } else {
       upstreamModelId = "0727-360B-API"; // Default upstream model ID
       upstreamModelName = "GLM-4.5";
@@ -134,9 +163,9 @@ openaiRouter.post("/chat/completions", async (ctx) => {
       messages: upstreamMessages,
       params: {},
       features: {
-        enable_thinking: isThinking,
-        web_search: isSearch,
-        auto_web_search: isSearch,
+        enable_thinking: isThinking || isNewThinking,
+        web_search: isSearch || isNewSearch,
+        auto_web_search: isSearch || isNewSearch,
       },
       background_tasks: {
         title_generation: false,
